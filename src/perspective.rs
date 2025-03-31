@@ -23,7 +23,7 @@ impl Equirectangular {
         }
     }
 
-    pub fn get_perspective(self, fov: f64, theta: f64, phi: f64, height: u32, width: u32) -> prelude::Mat {
+    pub fn get_perspective(&self, fov: f64, theta: f64, phi: f64, height: u32, width: u32) -> prelude::Mat {
         let f = 0.5 * (width as f64) * 1.0 / f64::tan(0.5 * fov / 180.0 * std::f64::consts::PI);
         let cx = (width as f64 - 1.0) / 2.0;
         let cy = (height as f64 - 1.0) / 2.0;
@@ -82,18 +82,17 @@ impl Equirectangular {
 
         let mut persp = prelude::Mat::default();
 
-        let x_values = xy.map_axis(Axis(2), |v| v[0] as f32);
-        let y_values = xy.map_axis(Axis(2), |v| v[1] as f32);
-
-        let x_values = x_values.into_dimensionality::<ndarray::Ix2>().unwrap();
-        let x_values = x_values.as_standard_layout();
-        let (rows, cols) = x_values.dim();
-        let x = prelude::Mat::new_rows_cols_with_data(rows as i32, cols as i32, x_values.as_slice().unwrap()).unwrap();
-
-        let y_values = y_values.into_dimensionality::<ndarray::Ix2>().unwrap();
-        let y_values = y_values.as_standard_layout();
-        let (rows, cols) = y_values.dim();
-        let y = prelude::Mat::new_rows_cols_with_data(rows as i32, cols as i32, y_values.as_slice().unwrap()).unwrap();
+        let binding = xy.map_axis(Axis(2), |v| v[0] as f32)
+            .into_dimensionality::<ndarray::Ix2>().unwrap();
+        let x_values = binding
+            .as_standard_layout();
+        let binding = xy.map_axis(Axis(2), |v| v[1] as f32)
+            .into_dimensionality::<ndarray::Ix2>().unwrap();
+        let y_values = binding
+            .as_standard_layout();
+        let (r_rows, r_cols) = x_values.dim();
+        let x = prelude::Mat::new_rows_cols_with_data(r_rows as i32, r_cols as i32, x_values.as_slice().unwrap()).unwrap();
+        let y = prelude::Mat::new_rows_cols_with_data(r_rows as i32, r_cols as i32, y_values.as_slice().unwrap()).unwrap();
 
         opencv::imgproc::remap(
             &self.src, &mut persp,
