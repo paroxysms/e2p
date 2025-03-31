@@ -1,10 +1,8 @@
-use image::{ImageReader};
 use ndarray::{Axis, s, Zip, concatenate, stack};
 use ndarray_linalg::Inverse;
-use nshare::IntoNdarray3;
 use opencv::{imgcodecs, prelude};
 use opencv::calib3d::rodrigues;
-use opencv::prelude::{MatExprTraitConst, MatTraitConstManual};
+use opencv::prelude::{MatExprTraitConst, MatTraitConst, MatTraitConstManual};
 
 pub struct Equirectangular {
     src: prelude::Mat,
@@ -14,13 +12,9 @@ pub struct Equirectangular {
 
 impl Equirectangular {
     pub fn new(img_name: &str) -> Equirectangular {
-        let rgb = ImageReader::open(img_name).expect("Could not read image!")
-            .decode().expect("Could not decode image!").into_rgb8();
-
-        let img = rgb.into_ndarray3().mapv(|p| p as f64);
         let src = imgcodecs::imread(img_name, imgcodecs::IMREAD_COLOR).expect("Could not read image!");
-        let height = img.shape()[2] as i32;
-        let width = img.shape()[1] as i32;
+        let height = src.rows();
+        let width = src.cols();
 
         Equirectangular {
             src,
