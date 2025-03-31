@@ -48,10 +48,9 @@ impl Equirectangular {
             .expect("Failed to stack arrays");
 
         let n_points = (height as usize) * (width as usize);
-        let xyz_2d = xyz.into_shape((n_points, 3)).expect("Failed to reshape xyz");
+        let xyz_2d = xyz.to_shape((n_points, 3)).expect("Failed to reshape xyz").to_owned();
         let transformed = xyz_2d.dot(&k_inv.t());
-        let reshaped_xyz = transformed.into_shape((height as usize, width as usize, 3))
-            .expect("Failed to reshape transformed xyz");
+        let reshaped_xyz = transformed.to_shape((height as usize, width as usize, 3)).expect("Failed to reshape transformed xyz").to_owned();
 
         let y_axis = opencv::core::Vec3d::from([0.0, 1.0, 0.0]);
         let x_axis = opencv::core::Vec3d::from([1.0, 0.0, 0.0]);
@@ -79,10 +78,10 @@ impl Equirectangular {
         let r_nd = ndarray::Array2::from_shape_vec((3, 3), r_vec.into_iter().flatten().collect())
             .expect("Failed to create ndarray from r");
 
-        let reshaped_xyz_2d = reshaped_xyz.into_shape((n_points, 3)).expect("Failed to reshape reshaped_xyz");
+        let reshaped_xyz_2d = reshaped_xyz.to_shape((n_points, 3)).expect("Failed to reshape reshaped_xyz").to_owned();
         let rotated = reshaped_xyz_2d.dot(&r_nd.t());
-        let rotated_xyz = rotated.into_shape((height as usize, width as usize, 3))
-            .expect("Failed to reshape rotated xyz");
+        let rotated_xyz = rotated.to_shape((height as usize, width as usize, 3))
+            .expect("Failed to reshape rotated xyz").to_owned();
 
         let lonlat = xyz_to_lonlat(rotated_xyz);
         let xy = lonlat_to_xy(lonlat, (self.width as usize, self.height as usize));
