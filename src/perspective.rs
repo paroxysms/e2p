@@ -4,7 +4,7 @@ use ndarray_linalg::Inverse;
 use nshare::IntoNdarray3;
 use opencv::{imgcodecs, prelude};
 use opencv::calib3d::rodrigues;
-use opencv::prelude::{MatTraitConstManual};
+use opencv::prelude::{MatExprTraitConst, MatTraitConstManual};
 
 pub struct Equirectangular {
     src: prelude::Mat,
@@ -47,17 +47,11 @@ impl Equirectangular {
         let xyz = stack(Axis(2), &[x.view(), y.view(), z.view()])
             .expect("Failed to stack arrays");
 
-        let mut reshaped_xyz = ndarray::Array3::<f64>::zeros((height as usize, width as usize, 3));
-        for i in 0..height as usize {
-            for j in 0..width as usize {
-                // Extract the 3-element vector for pixel (i, j).
-                let vec = xyz.slice(s![i, j, ..]);
-                let vec_owned = vec.to_owned();
-                // Multiply using k_inv, equivalent to xyz @ k_inv.T in Python.
-                let transformed_vec = k_inv.dot(&vec_owned);
-                reshaped_xyz.slice_mut(s![i, j, ..]).assign(&transformed_vec);
-            }
-        }
+        let n_points = (height as usize) * (width as usize);
+        let xyz_2d = xyz.into_shape((n_points, 3)).expect("Failed to reshape xyz");
+        let transformed = xyz_2d.dot(&k_inv.t());
+        let reshaped_xyz = transformed.into_shape((height as usize, width as usize, 3))
+            .expect("Failed to reshape transformed xyz");
 
         let y_axis = opencv::core::Vec3d::from([0.0, 1.0, 0.0]);
         let x_axis = opencv::core::Vec3d::from([1.0, 0.0, 0.0]);
@@ -79,25 +73,16 @@ impl Equirectangular {
             r1_dot_x_axis_vec[2][0] * phi_rad
         ]).unwrap(), &mut r2, &mut opencv::core::Mat::default()).unwrap();
 
-        let r = (r2 * r1).into_result().unwrap();
+        let r = (r2 * r1).into_result().unwrap().to_mat().unwrap();
 
-        let mut rotated_xyz = ndarray::Array3::<f64>::zeros((height as usize, width as usize, 3));
-        for i in 0..height as usize {
-            for j in 0..width as usize {
-                let vec = reshaped_xyz.slice(s![i, j, ..]);
-                let vec_owned = vec.to_owned();
-                let vec_data = vec_owned.to_vec();
-                let input_vec = opencv::core::Mat::from_slice_2d(&[[vec_data[0]], [vec_data[1]], [vec_data[2]]]).unwrap();
-                let mut product = prelude::Mat::default();
-                opencv::core::gemm(&r, &input_vec, 1.0, &prelude::Mat::default(), 0.0, &mut product, 0).unwrap();
-                let transformed_vec_vec = product.to_vec_2d::<f64>().unwrap();
-                rotated_xyz.slice_mut(s![i, j, ..]).assign(&ndarray::arr1(&[
-                    transformed_vec_vec[0][0],
-                    transformed_vec_vec[1][0],
-                    transformed_vec_vec[2][0],
-                ]));
-            }
-        }
+        let r_vec = r.to_vec_2d::<f64>().unwrap(); // Vec<Vec<f64>>
+        let r_nd = ndarray::Array2::from_shape_vec((3, 3), r_vec.into_iter().flatten().collect())
+            .expect("Failed to create ndarray from r");
+
+        let reshaped_xyz_2d = reshaped_xyz.into_shape((n_points, 3)).expect("Failed to reshape reshaped_xyz");
+        let rotated = reshaped_xyz_2d.dot(&r_nd.t());
+        let rotated_xyz = rotated.into_shape((height as usize, width as usize, 3))
+            .expect("Failed to reshape rotated xyz");
 
         let lonlat = xyz_to_lonlat(rotated_xyz);
         let xy = lonlat_to_xy(lonlat, (self.width as usize, self.height as usize));
@@ -160,3 +145,4 @@ fn lonlat_to_xy(lonlat: ndarray::Array3<f64>, shape: (usize, usize)) -> ndarray:
     concatenate(Axis(2), &[x.view(), y.view()])
         .expect("Failed to concatenate X and Y")
 }
+
