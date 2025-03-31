@@ -1,0 +1,12 @@
+[package]
+name = "e2p"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+ndarray = "0.16.1"
+image = "0.25.5"
+nshare = "0.10.0"
+ndarray-linalg = { version = "0.17.0", features = ["openblas-system"] }
+opencv = "0.92"
+#cv-convert-fork = { version = "0.27.0", default-features = false, features = ["opencv_0-92", "ndarray_0-15"] }
