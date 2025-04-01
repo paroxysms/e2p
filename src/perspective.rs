@@ -13,8 +13,8 @@ pub struct Equirectangular {
 impl Equirectangular {
     pub fn new(img_name: &str) -> Equirectangular {
         let src = imgcodecs::imread(img_name, imgcodecs::IMREAD_COLOR).expect("Could not read image!");
-        let height = src.rows();
-        let width = src.cols();
+        let height = src.cols();
+        let width = src.rows();
 
         Equirectangular {
             src,
@@ -137,4 +137,3 @@ fn lonlat_to_xy(lonlat: ndarray::Array3<f64>, shape: (usize, usize)) -> ndarray:
     concatenate(Axis(2), &[x.view(), y.view()])
         .expect("Failed to concatenate X and Y")
 }
-
